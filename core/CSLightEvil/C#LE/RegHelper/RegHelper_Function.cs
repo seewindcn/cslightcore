@@ -32,15 +32,19 @@ namespace CSLE
                 this.keyword = dele.Method.Name;
             }
             returntype = dele.Method.ReturnType;
-            foreach (System.Reflection.ParameterInfo p in dele.Method.GetParameters())
+            System.Reflection.ParameterInfo pp=null;
+            foreach (var p in dele.Method.GetParameters())
             {
                 defvalues.Add(p.DefaultValue);
                 paramtype.Add(p.ParameterType);
+                pp = p;
             }
+            isParams = pp!=null && Attribute.IsDefined(pp, typeof (ParamArrayAttribute));
         }
         List<object> defvalues = new List<object>();
         List<Type> paramtype = new List<Type>();
         Type returntype;
+        bool isParams;
         public string keyword
         {
             get;
@@ -51,8 +55,11 @@ namespace CSLE
         {
             CLS_Content.Value v = new CLS_Content.Value();
             List<object> objs = new List<object>();
+            List<object> args = isParams ? new List<object>() : null;
             //var _params =   dele.Method.GetParameters();
-            for (int i = 0; i < this.defvalues.Count; i++)
+            int c = this.defvalues.Count;
+            if (isParams) c -= 1;
+            for (int i = 0; i < c; i++)
             {
                 if (i >= param.Count)
                 {
@@ -70,6 +77,14 @@ namespace CSLE
                         objs.Add(conv);
                     }
                 }
+            }
+            if (isParams)
+            {
+                for (int i = c; i < param.Count; i++)
+                {
+                    args.Add(param[i].value);
+                }
+                objs.Add(args.ToArray());
             }
             v.type = this.returntype;
             v.value = dele.DynamicInvoke(objs.ToArray());
