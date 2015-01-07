@@ -687,11 +687,20 @@ namespace CSLE
                 if (c.finfo == null)
                 {
                     c.minfo = type.GetMethod("set_" + valuename);
+                    var mss = type.GetMethods();
                     if (c.minfo == null)
                     {
-                        c.type = -1;
-                        return false;
+                        if (type.GetMethod("add_" + valuename) != null)
+                        {
+                            c.type = 3;//event;
+                        }
+                        else
+                        {
+                            c.type = -1;
+                            return false;
+                        }
                     }
+
                     else
                     {
                         c.type = 2;
@@ -715,7 +724,7 @@ namespace CSLE
                 }
                 c.finfo.SetValue(object_this, value);
             }
-            else
+            else if(c.type==2)
             {
                 var ptype = c.minfo.GetParameters()[0].ParameterType;
                 if (value != null && value.GetType() != ptype)
@@ -876,11 +885,11 @@ namespace CSLE
 
     public class RegHelper_Type : ICLS_Type
     {
-        public static RegHelper_Type Make(Type type, string keyword)
+        public static RegHelper_Type MakeType(Type type, string keyword)
         {
             if (!type.IsSubclassOf(typeof(Delegate)))
             {
-                return new RegHelper_Type(type, keyword);
+                return new RegHelper_Type(type, keyword, false);
             }
             var method = type.GetMethod("Invoke");
             var pp = method.GetParameters();
@@ -939,14 +948,22 @@ namespace CSLE
 
 
         }
+        [Obsolete("use MakeType Instead.")]
+        public static RegHelper_Type Make(Type type, string keyword)
+        {
+            return MakeType(type, keyword);
+        }
+        [Obsolete("use MakeType Instead.")]
         public static RegHelper_Type MakeClass(Type type, string keyword)
         {
-            return Make(type, keyword);
+            return MakeType(type, keyword);
         }
+        [Obsolete("use MakeType Instead.")]
         public static RegHelper_Type MakeDelegate(Type type, string keyword)
         {
-            return Make(type, keyword);
+            return MakeType(type, keyword);
         }
+        [Obsolete("use MakeType Instead.")]
         public RegHelper_Type(Type type)
         {
             function = new RegHelper_TypeFunction(type);
@@ -954,6 +971,7 @@ namespace CSLE
             this.type = type;
             this._type = type;
         }
+        [Obsolete("use MakeType Instead.")]
         public RegHelper_Type(Type type, string setkeyword)
         {
             if (type.IsSubclassOf(typeof(Delegate)))
