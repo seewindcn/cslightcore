@@ -115,21 +115,34 @@ namespace CSLE
             DeleFunction _func = delefunc;
             Delegate _dele = delefunc.cacheFunction(this._type, null);
             if (_dele != null) return _dele;
-            NonVoidDelegate dele = delegate(T param) {
+            NonVoidDelegate dele = delegate(T param)
+            {
                 var func = _func.calltype.functions[_func.function];
-                if (func.expr_runtime != null) {
-                    CLS_Content content = new CLS_Content(env);
+                if (func.expr_runtime != null)
+                {
+                    CLS_Content content = new CLS_Content(env, true);
+                    try
+                    {
+                        content.DepthAdd();
+                        content.CallThis = _func.callthis;
+                        content.CallType = _func.calltype;
+                        content.function = _func.function;
 
-                    content.DepthAdd();
-                    content.CallThis = _func.callthis;
-                    content.CallType = _func.calltype;
-                    content.function = _func.function;
+                        content.DefineAndSet(func._paramnames[0], func._paramtypes[0].type, param);
+                        CLS_Content.Value retValue = func.expr_runtime.ComputeValue(content);
+                        content.DepthRemove();
 
-                    content.DefineAndSet(func._paramnames[0], func._paramtypes[0].type, param);
-                    CLS_Content.Value retValue = func.expr_runtime.ComputeValue(content);
-                    content.DepthRemove();
-
-                    return (ReturnType)retValue.value;
+                        return (ReturnType)retValue.value;
+                    }
+                    catch (Exception err)
+                    {
+                        string errinfo = "Dump Call in:";
+                        if (_func.calltype != null) errinfo += _func.calltype.Name + "::";
+                        if (_func.function != null) errinfo += _func.function;
+                        errinfo += "\n";
+                        env.logger.Log(errinfo + content.Dump()); 
+                        throw err;
+                    }
                 }
                 return default(ReturnType);
             };
@@ -139,21 +152,35 @@ namespace CSLE
 
         public Delegate CreateDelegate(ICLS_Environment env, DeleLambda lambda)
         {
+            CLS_Content content = lambda.content.Clone();
             var pnames = lambda.paramNames;
             var expr = lambda.expr_func;
 
-            NonVoidDelegate dele = delegate(T param) {
-                if (expr != null) {
-                    CLS_Content content = lambda.content.Clone();
+            NonVoidDelegate dele = delegate(T param)
+            {
+                if (expr != null)
+                {
+                    try
+                    {
 
-                    content.DepthAdd();
+                        content.DepthAdd();
 
-                    content.DefineAndSet(pnames[0], typeof(T), param);
-                    CLS_Content.Value retValue = expr.ComputeValue(content);
+                        content.DefineAndSet(pnames[0], typeof(T), param);
+                        CLS_Content.Value retValue = expr.ComputeValue(content);
 
-                    content.DepthRemove();
+                        content.DepthRemove();
 
-                    return (ReturnType)retValue.value;
+                        return (ReturnType)retValue.value;
+                    }
+                    catch (Exception err)
+                    {
+                        string errinfo = "Dump Call lambda in:";
+                        if (content.CallType != null) errinfo += content.CallType.Name + "::";
+                        if (content.function != null) errinfo += content.function;
+                        errinfo += "\n";
+                        env.logger.Log(errinfo + content.Dump());
+                        throw err;
+                    }
                 }
                 return default(ReturnType);
             };
